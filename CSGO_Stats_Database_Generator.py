@@ -165,8 +165,8 @@ def getAvgRatingDiff(team1, team2, numMatches, c, matchDate):
     return team_avg_rating(team1, numMatches, c, matchDate) - team_avg_rating(team2, numMatches, c, matchDate)
 
 
-
-
+def getScoreDiff(match):
+    return match[4] - match[6]
 def createAllMatchesTable(conn):
     createTableSql = """ CREATE TABLE IF NOT EXISTS allMatches (
                                             matchDate DATE,
@@ -179,21 +179,22 @@ def createAllMatchesTable(conn):
                                             result TEXT,
                                             type TEXT,
                                             matchId FLOAT,
-                                            nukeDiff DECIMAL,
-                                            mirageDiff DECIMAL,
-                                            trainDiff DECIMAL,
-                                            cacheDiff DECIMAL,
-                                            overpassDiff DECIMAL,
-                                            cobblestoneDiff DECIMAL,
-                                            infernoDiff DECIMAL,
-                                            ratingDiff DECIMAL,                      
+                                            scoreDiff FLOAT,
+                                            nukeDiff FLOAT,
+                                            mirageDiff FLOAT,
+                                            trainDiff FLOAT,
+                                            cacheDiff FLOAT,
+                                            overpassDiff FLOAT,
+                                            cobblestoneDiff FLOAT,
+                                            infernoDiff FLOAT,
+                                            ratingDiff FLOAT,                      
                                             UNIQUE (matchId)
                                         ); """
     c = conn.cursor()
     c.execute(createTableSql)
     c.execute("SELECT name FROM teamRanking")
     for table in c.fetchall():
-        sql = """SELECT matchDate, event, map, team1, score1, team2, score2, result, type, matchId FROM {} 
+        sql = """SELECT matchDate, event, map, team1, score1, team2, score2,  result, type, matchId FROM {} 
         WHERE matchId NOT IN (SELECT matchId FROM allMatches) 
         AND team1 IN (SELECT name FROM teamRanking) 
         AND team2 IN (SELECT name FROM teamRanking);""".format(table[0])
@@ -209,12 +210,13 @@ def createAllMatchesTable(conn):
             cobblestoneDiff = map_win_percentage_diff(match[3], match[5], 'cobblestone', c, match[0])
             infernoDiff = map_win_percentage_diff(match[3], match[5], 'inferno', c, match[0])
             ratingDiff = getAvgRatingDiff(match[3], match[5], 15, c, match[0])
-            completeMatchInfo = match + (nukeDiff, mirageDiff, trainDiff, cacheDiff, overpassDiff, cobblestoneDiff, infernoDiff, ratingDiff)
+            scoreDiff = getScoreDiff(match)
+            completeMatchInfo = match + (scoreDiff, nukeDiff, mirageDiff, trainDiff, cacheDiff, overpassDiff, cobblestoneDiff, infernoDiff, ratingDiff)
             c.execute("""INSERT INTO allMatches (matchDate ,
                                             event, map, team1 , score1 , team2 , score2 ,result ,
-                                            type , matchId ,  nukeDiff , mirageDiff , trainDiff ,
+                                            type , matchId , scoreDiff, nukeDiff , mirageDiff , trainDiff ,
                                             cacheDiff ,overpassDiff , cobblestoneDiff, infernoDiff,
-                                            ratingDiff ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",completeMatchInfo)
+                                            ratingDiff) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",completeMatchInfo)
 
 
 
@@ -243,18 +245,22 @@ def dropTables(conn):
 
 
 def main():
-    database = "/Users/wt/Desktop/CSGO Stats Database/CSGOsqlite.db"
-    conn = createConnection(database)
-    while True:
-        x = input("1. Import CSV to Database\n2. Drop All Tables\nq\n")
-        if x == "1":
-            importCSVtoDB(conn)
-            createAllMatchesTable(conn)
-        elif x == '2':
-            dropTables(conn)
-        else:
-            break;
-    conn.close()
+    try:
+        database = "/Users/wt/Desktop/CSGO Stats Database/CSGOsqlite.db"
+        conn = createConnection(database)
+        while True:
+            x = input("1. Import CSV to Database\n2. Drop All Tables\nq\n")
+            if x == "1":
+                importCSVtoDB(conn)
+                createAllMatchesTable(conn)
+            elif x == '2':
+                dropTables(conn)
+            else:
+                break;
+    except KeyboardInterrupt:
+        print("End process by keyboard interruption")
+    finally:
+        conn.close()
 
 
 if __name__ == '__main__':
