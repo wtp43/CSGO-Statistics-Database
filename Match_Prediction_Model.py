@@ -24,15 +24,14 @@ import numpy as np
 
 def main():
     try:
-        cleanup_nums = {"result": {"W": 1, "L": -1, "T":0}}
         database = "/Users/wt/Desktop/CSGO Stats Database/CSGOsqlite.db"
         conn = createConnection(database)
         c = conn.cursor()
-        data = pd.read_sql_query("""SELECT result, nukeDiff, mirageDiff,
+        data = pd.read_sql_query("""SELECT type, result, nukeDiff, mirageDiff,
                                  trainDiff, cacheDiff, overpassDiff, cobblestoneDiff, ratingDiff
                                  FROM allMatches ;""", conn)
 
-        data.replace(cleanup_nums, inplace=True)
+        convert_categorical_variates(data)
         X = data.drop(['result'],1)
         y = data['result']
         cols_to_scale = ['nukeDiff', 'mirageDiff', 'trainDiff', 'cacheDiff', 'cobblestoneDiff',
@@ -48,7 +47,7 @@ def main():
         lrm = LogisticRegression(random_state=1)
         model = lrm.fit(X_train, y_train)
         #predictions = lrm.predict(X_test)
-        print("Linear regression SCORE:", model.score(X_train, y_train))
+        print("Linear regression SCORE:", model.score(X_test, y_test))
     except KeyboardInterrupt:
         print("Process ended by keyboard interruption")
     finally:
